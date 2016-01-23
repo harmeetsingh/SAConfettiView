@@ -16,20 +16,27 @@ public class SAConfettiView: UIView {
         case Triangle
         case Star
         case Diamond
-        case Custom
+        case CustomImage
+        case CustomImages
     }
-
-    var emitter: CAEmitterLayer!
+    
     public var colors: [UIColor]!
     public var intensity: Float!
     public var type: ConfettiType!
     public var customImage: UIImage?
+    public var customImages: [UIImage]?
+    public private(set) var isRaining: Bool = false
     
+    private var emitter: CAEmitterLayer!
+    private var selectedIndex: Int?
+    
+    // MARK: Lifecycle
     required public init?(coder aDecoder: NSCoder) {
         super.init(coder: aDecoder)
     }
     
     public override init(frame: CGRect) {
+        
         super.init(frame: frame)
         colors = [UIColor(red:0.95, green:0.40, blue:0.27, alpha:1.0),
                   UIColor(red:1.00, green:0.78, blue:0.36, alpha:1.0),
@@ -40,9 +47,10 @@ public class SAConfettiView: UIView {
         type = .Confetti
     }
     
+    // MARK: Confetti Start/Stop
     public func startConfetti() {
-        emitter = CAEmitterLayer()
         
+        emitter = CAEmitterLayer()
         emitter.emitterPosition = CGPoint(x: center.x, y: 0)
         emitter.emitterShape = kCAEmitterLayerLine
         emitter.emitterSize = CGSize(width: frame.size.width, height: 1)
@@ -50,16 +58,23 @@ public class SAConfettiView: UIView {
         var cells = [CAEmitterCell]()
         for color in colors {
             cells.append(confettiWithColor(color))
+            selectedIndex = colors.indexOf(color)
         }
         
         emitter.emitterCells = cells
         layer.addSublayer(emitter)
+        isRaining = true
     }
     
     public func stopConfetti() {
-        emitter.birthRate = 0
+        
+        if emitter != nil {
+            emitter.birthRate = 0
+            isRaining = false
+        }
     }
     
+    // Helpers
     func imageForType(type: ConfettiType) -> UIImage? {
         
         var fileName: String!
@@ -73,8 +88,10 @@ public class SAConfettiView: UIView {
             fileName = "star"
         case .Diamond:
             fileName = "diamond"
-        case .Custom:
+        case .CustomImage:
             return customImage
+        case .CustomImages:
+            return customImages![selectedIndex!]
         }
         
         let path = NSBundle(forClass: SAConfettiView.self).pathForResource("SAConfettiView", ofType: "bundle")
@@ -93,7 +110,6 @@ public class SAConfettiView: UIView {
         confetti.birthRate = 6.0 * intensity
         confetti.lifetime = 14.0 * intensity
         confetti.lifetimeRange = 0
-        confetti.color = color.CGColor
         confetti.velocity = CGFloat(350.0 * intensity)
         confetti.velocityRange = CGFloat(80.0 * intensity)
         confetti.emissionLongitude = CGFloat(M_PI)
@@ -103,6 +119,11 @@ public class SAConfettiView: UIView {
         confetti.scaleRange = CGFloat(intensity)
         confetti.scaleSpeed = CGFloat(-0.1 * intensity)
         confetti.contents = imageForType(type)!.CGImage
+        
+        if type != .CustomImage && type != .CustomImages {
+            confetti.color = color.CGColor
+        }
+        
         return confetti
     }
 
